@@ -1,4 +1,4 @@
-# usage: python benders_basic.py --iters=100 MIPFocus=3 /path/to/model.mps.bz2
+# usage: python benders_basic_bounded.py --iters=100 MIPFocus=3 /path/to/model.mps.bz2
 
 import scipy.sparse as ss
 import gurobipy as gp
@@ -11,10 +11,15 @@ def run(filename, max_iters, **master_params):
     for v in vars:
         if v.vtype == "B":
             raise ValueError("Not built for binaries")
-        if v.lb != 0:
-            raise ValueError("Not built for variables with non-zero lower bounds")
+        if v.lb < 0:
+            raise ValueError("Not built for variables with negative lower bounds")
+        if v.lb > 0:
+            m.addConstr(v >= v.lb)
+            v.lb = 0
         if v.ub != float("inf"):
-            raise ValueError("Not built for variables with upper bounds")
+            m.addConstr(v <= v.ub)
+            v.ub = float("inf")
+    m.update()
     i_vars  = [v for v in vars if v.vtype!="C"]
     c_vars = [v for v in vars if v.vtype=="C"]
 
